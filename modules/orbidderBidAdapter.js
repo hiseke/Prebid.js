@@ -23,35 +23,41 @@ export const spec = {
   },
 
   buildRequests(validBidRequests, bidderRequest) {
-    return validBidRequests.map((bidRequest) => {
-      let referer = '';
-      if (bidderRequest && bidderRequest.refererInfo) {
-        referer = bidderRequest.refererInfo.referer || '';
-      }
-      const ret = {
-        url: `${spec.orbidderHost}/bid`,
-        method: 'POST',
-        data: {
-          pageUrl: referer,
-          bidId: bidRequest.bidId,
-          auctionId: bidRequest.auctionId,
-          transactionId: bidRequest.transactionId,
-          adUnitCode: bidRequest.adUnitCode,
-          sizes: bidRequest.sizes,
-          params: bidRequest.params
-        }
+    const bids = [];
+    for (const bidRequest of validBidRequests) {
+      const item = {
+        bidId: bidRequest.bidId,
+        auctionId: bidRequest.auctionId,
+        transactionId: bidRequest.transactionId,
+        adUnitCode: bidRequest.adUnitCode,
+        sizes: bidRequest.sizes,
+        params: bidRequest.params
       };
       spec.bidParams[bidRequest.bidId] = bidRequest.params;
       if (bidRequest && bidRequest.gdprConsent) {
-        ret.data.gdprConsent = {
+        item.data.gdprConsent = {
           consentString: bidRequest.gdprConsent.consentString,
           consentRequired: (typeof bidRequest.gdprConsent.gdprApplies === 'boolean')
             ? bidRequest.gdprConsent.gdprApplies
             : true
         };
       }
-      return ret;
-    });
+      bids.push(item);
+    }
+
+    let referer = '';
+    if (bidderRequest && bidderRequest.refererInfo) {
+      referer = bidderRequest.refererInfo.referer || '';
+    }
+
+    return {
+      url: `${spec.orbidderHost}/bid`,
+      method: 'POST',
+      data: {
+        pageUrl: referer,
+        bids: bids
+      }
+    };
   },
 
   interpretResponse(serverResponse) {
