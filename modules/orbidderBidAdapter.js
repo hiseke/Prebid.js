@@ -5,10 +5,10 @@ import {registerBidder} from '../src/adapters/bidderFactory';
 export const spec = {
   code: 'orbidder',
   bidParams: {},
-  versionPath: (() => {
+  bidVersionPath: (() => {
     let ret = '';
     try {
-      ret = localStorage.getItem('ov_orbidder_version') || ret;
+      ret = localStorage.getItem('ov_orbidder_bid_version') || ret;
     } catch (e) {
     }
     return ret;
@@ -31,7 +31,7 @@ export const spec = {
   },
 
   buildRequests(validBidRequests, bidderRequest) {
-    if (spec.versionPath === "") {
+    if (spec.bidVersionPath === "") {
       //first version with single request per ad-slot
       return validBidRequests.map((bidRequest) => {
         let referer = '';
@@ -92,7 +92,7 @@ export const spec = {
       }
 
       return {
-        url: `${spec.orbidderHost}/${spec.versionPath}/bid`,
+        url: `${spec.orbidderHost}/${spec.bidVersionPath}/bid`,
         method: 'POST',
         data: {
           pageUrl: referer,
