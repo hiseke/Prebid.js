@@ -5,6 +5,14 @@ import {registerBidder} from '../src/adapters/bidderFactory';
 export const spec = {
   code: 'orbidder',
   bidParams: {},
+  versionPath: (() => {
+    let ret = '';
+    try {
+      ret = localStorage.getItem('ov_orbidder_version') || ret;
+    } catch (e) {
+    }
+    return ret;
+  })(),
   orbidderHost: (() => {
     let ret = 'https://orbidder.otto.de';
     try {
@@ -23,41 +31,75 @@ export const spec = {
   },
 
   buildRequests(validBidRequests, bidderRequest) {
-    const bids = [];
-    for (const bidRequest of validBidRequests) {
-      const item = {
-        bidId: bidRequest.bidId,
-        auctionId: bidRequest.auctionId,
-        transactionId: bidRequest.transactionId,
-        adUnitCode: bidRequest.adUnitCode,
-        sizes: bidRequest.sizes,
-        params: bidRequest.params
-      };
-      spec.bidParams[bidRequest.bidId] = bidRequest.params;
-      if (bidRequest && bidRequest.gdprConsent) {
-        item.data.gdprConsent = {
-          consentString: bidRequest.gdprConsent.consentString,
-          consentRequired: (typeof bidRequest.gdprConsent.gdprApplies === 'boolean')
-            ? bidRequest.gdprConsent.gdprApplies
-            : true
+    if (spec.versionPath === "") {
+      //first version with single request per ad-slot
+      return validBidRequests.map((bidRequest) => {
+        let referer = '';
+        if (bidderRequest && bidderRequest.refererInfo) {
+          referer = bidderRequest.refererInfo.referer || '';
+        }
+        const ret = {
+          url: `${spec.orbidderHost}/bid`,
+          method: 'POST',
+          data: {
+            pageUrl: referer,
+            bidId: bidRequest.bidId,
+            auctionId: bidRequest.auctionId,
+            transactionId: bidRequest.transactionId,
+            adUnitCode: bidRequest.adUnitCode,
+            sizes: bidRequest.sizes,
+            params: bidRequest.params
+          }
         };
+        spec.bidParams[bidRequest.bidId] = bidRequest.params;
+        if (bidRequest && bidRequest.gdprConsent) {
+          ret.data.gdprConsent = {
+            consentString: bidRequest.gdprConsent.consentString,
+            consentRequired: (typeof bidRequest.gdprConsent.gdprApplies === 'boolean')
+              ? bidRequest.gdprConsent.gdprApplies
+              : true
+          };
+        }
+        return ret;
+      });
+    } else {
+      //newer Version, use multi bid request
+      const bids = [];
+      for (const bidRequest of validBidRequests) {
+        const item = {
+          bidId: bidRequest.bidId,
+          auctionId: bidRequest.auctionId,
+          transactionId: bidRequest.transactionId,
+          adUnitCode: bidRequest.adUnitCode,
+          sizes: bidRequest.sizes,
+          params: bidRequest.params
+        };
+        spec.bidParams[bidRequest.bidId] = bidRequest.params;
+        if (bidRequest && bidRequest.gdprConsent) {
+          item.data.gdprConsent = {
+            consentString: bidRequest.gdprConsent.consentString,
+            consentRequired: (typeof bidRequest.gdprConsent.gdprApplies === 'boolean')
+              ? bidRequest.gdprConsent.gdprApplies
+              : true
+          };
+        }
+        bids.push(item);
       }
-      bids.push(item);
-    }
 
-    let referer = '';
-    if (bidderRequest && bidderRequest.refererInfo) {
-      referer = bidderRequest.refererInfo.referer || '';
-    }
-
-    return {
-      url: `${spec.orbidderHost}/bid`,
-      method: 'POST',
-      data: {
-        pageUrl: referer,
-        bids: bids
+      let referer = '';
+      if (bidderRequest && bidderRequest.refererInfo) {
+        referer = bidderRequest.refererInfo.referer || '';
       }
-    };
+
+      return {
+        url: `${spec.orbidderHost}/${spec.versionPath}/bid`,
+        method: 'POST',
+        data: {
+          pageUrl: referer,
+          bids: bids
+        }
+      };
+    }
   },
 
   interpretResponse(serverResponse) {
