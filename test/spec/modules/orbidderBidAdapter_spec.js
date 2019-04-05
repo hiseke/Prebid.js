@@ -99,7 +99,7 @@ describe('orbidderBidAdapter', () => {
       });
     });
 
-    it('bundles multiple bids in one reueqst', () => {
+    it('bundles multiple bids in one request', () => {
       const secondRequest = deepClone(defaultBidRequest);
       const expected = [defaultBidRequest, secondRequest];
       const multiRequest = buildRequest(defaultBidRequest, secondRequest);
