@@ -20,14 +20,14 @@ describe('orbidderBidAdapter', () => {
     return JSON.parse(JSON.stringify(val));
   };
 
-  const buildRequest = function (buildRequest) {
+  const buildRequest = (buildRequest1, buildRequest2) => {
     return spec.buildRequests(
-      [buildRequest],
+      [buildRequest1].concat(buildRequest2 || []),
       {
         refererInfo: {
           referer: 'http://localhost:9876/'
         }
-      })[0];
+      });
   };
 
   describe('inherited functions', () => {
@@ -87,17 +87,32 @@ describe('orbidderBidAdapter', () => {
     it('sends bid request to endpoint via https using post', () => {
       expect(request.method).to.equal('POST');
       expect(request.url.indexOf('https://')).to.equal(0);
-      expect(request.url).to.equal(`${spec.orbidderHost}/bid`);
+      expect(request.url).to.equal(`${spec.orbidderHost}/v2/bid`);
     });
 
     it('sends correct bid parameters', () => {
       // we add one, because we add referer information from bidderRequest object
-      expect(Object.keys(request.data).length).to.equal(Object.keys(defaultBidRequest).length + 1);
+      expect(Object.keys(request.data.bids[0]).length).to.equal(Object.keys(defaultBidRequest).length + 1);
       expect(request.data.pageUrl).to.equal('http://localhost:9876/');
-      // expect(request.data.referrer).to.equal('');
       Object.keys(defaultBidRequest).forEach((key) => {
-        expect(defaultBidRequest[key]).to.equal(request.data[key]);
+        expect(defaultBidRequest[key]).to.equal(request.data.bids[0][key]);
       });
+    });
+
+    it('bundles multiple bids in one reueqst', () => {
+      const secondRequest = deepClone(defaultBidRequest);
+      const expected = [defaultBidRequest, secondRequest];
+      const multiRequest = buildRequest(defaultBidRequest, secondRequest);
+
+      expect(multiRequest.data.bids.length).to.equal(2);
+      expect(multiRequest.data.pageUrl).to.equal('http://localhost:9876/');
+
+      for (const [idx, bid] of Object.entries(multiRequest.data.bids)) {
+        expect(Object.keys(bid).length).to.equal(Object.keys(defaultBidRequest).length + 1);
+        Object.keys(expected[idx]).forEach((key) => {
+          expect(expected[idx][key]).to.equal(bid[key]);
+        });
+      }
     });
 
     it('handles empty gdpr object', () => {
@@ -105,7 +120,7 @@ describe('orbidderBidAdapter', () => {
       bidRequest.gdprConsent = {};
 
       const request = buildRequest(bidRequest);
-      expect(request.data.gdprConsent.consentRequired).to.be.equal(true);
+      expect(request.data.bids[0].gdprConsent.consentRequired).to.be.equal(true);
     });
 
     it('handles non-existent gdpr object', () => {
@@ -113,7 +128,7 @@ describe('orbidderBidAdapter', () => {
       bidRequest.gdprConsent = null;
 
       const request = buildRequest(bidRequest);
-      expect(request.data.gdprConsent).to.be.undefined;
+      expect(request.data.bids[0].gdprConsent).to.be.undefined;
     });
 
     it('handles properly filled gdpr object where gdpr applies', () => {
@@ -125,7 +140,7 @@ describe('orbidderBidAdapter', () => {
       };
 
       const request = buildRequest(bidRequest);
-      const gdprConsent = request.data.gdprConsent;
+      const gdprConsent = request.data.bids[0].gdprConsent;
       expect(gdprConsent.consentRequired).to.be.equal(true);
       expect(gdprConsent.consentString).to.be.equal(consentString);
     });
@@ -139,7 +154,7 @@ describe('orbidderBidAdapter', () => {
       };
 
       const request = buildRequest(bidRequest);
-      const gdprConsent = request.data.gdprConsent;
+      const gdprConsent = request.data.bids[0].gdprConsent;
       expect(gdprConsent.consentRequired).to.be.equal(false);
       expect(gdprConsent.consentString).to.be.equal(consentString);
     });
