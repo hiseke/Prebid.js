@@ -87,7 +87,7 @@ export const spec = {
       winObj.params = spec.bidParams[winObj.adId];
     }
 
-    spec.ajaxCall(`${spec.orbidderHost}/win`, JSON.stringify(winObj));
+    spec.ajaxCall(`${spec.orbidderHost}/v2/win`, JSON.stringify(winObj));
   },
 
   ajaxCall(endpoint, data) {

@@ -181,7 +181,7 @@ describe('orbidderBidAdapter', () => {
       spec.onBidWon(winObj);
       expect(ajaxStub.calledOnce).to.equal(true);
       expect(ajaxStub.firstCall.args[0].indexOf('https://')).to.equal(0);
-      expect(ajaxStub.firstCall.args[0]).to.equal(`${spec.orbidderHost}/win`);
+      expect(ajaxStub.firstCall.args[0]).to.equal(`${spec.orbidderHost}/v2/win`);
       expect(ajaxStub.firstCall.args[1]).to.equal(JSON.stringify(winObj));
     });
   });
