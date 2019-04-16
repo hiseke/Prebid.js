@@ -20,14 +20,19 @@ describe('orbidderBidAdapter', () => {
     return JSON.parse(JSON.stringify(val));
   };
 
-  const buildRequest = (buildRequest1, buildRequest2) => {
-    return spec.buildRequests(
-      [buildRequest1].concat(buildRequest2 || []),
-      {
-        refererInfo: {
-          referer: 'http://localhost:9876/'
-        }
-      });
+  const buildRequest = (buildRequest, bidderRequest) => {
+    bidderRequest = {
+      ...bidderRequest || {},
+      refererInfo: {
+        referer: 'http://localhost:9876/'
+      }
+    };
+
+    if (!Array.isArray(buildRequest)) {
+      buildRequest = [buildRequest];
+    }
+
+    return spec.buildRequests(buildRequest, bidderRequest);
   };
 
   describe('inherited functions', () => {
@@ -102,7 +107,7 @@ describe('orbidderBidAdapter', () => {
     it('bundles multiple bids in one request', () => {
       const secondRequest = deepClone(defaultBidRequest);
       const expected = [defaultBidRequest, secondRequest];
-      const multiRequest = buildRequest(defaultBidRequest, secondRequest);
+      const multiRequest = buildRequest([defaultBidRequest, secondRequest]);
 
       expect(multiRequest.data.bids.length).to.equal(2);
       expect(multiRequest.data.pageUrl).to.equal('http://localhost:9876/');
@@ -116,45 +121,43 @@ describe('orbidderBidAdapter', () => {
     });
 
     it('handles empty gdpr object', () => {
-      const bidRequest = deepClone(defaultBidRequest);
-      bidRequest.gdprConsent = {};
-
-      const request = buildRequest(bidRequest);
-      expect(request.data.bids[0].gdprConsent.consentRequired).to.be.equal(true);
+      const request = buildRequest(defaultBidRequest, {
+        gdprConsent: {}
+      });
+      expect(request.data.gdprConsent.consentRequired).to.be.equal(true);
     });
 
     it('handles non-existent gdpr object', () => {
-      const bidRequest = deepClone(defaultBidRequest);
-      bidRequest.gdprConsent = null;
-
-      const request = buildRequest(bidRequest);
-      expect(request.data.bids[0].gdprConsent).to.be.undefined;
+      const request = buildRequest(defaultBidRequest, {
+        gdprConsent: null
+      });
+      expect(request.data.gdprConsent).to.be.undefined;
     });
 
     it('handles properly filled gdpr object where gdpr applies', () => {
       const consentString = 'someWeirdString';
-      const bidRequest = deepClone(defaultBidRequest);
-      bidRequest.gdprConsent = {
-        gdprApplies: true,
-        consentString: 'someWeirdString'
-      };
+      const request = buildRequest(defaultBidRequest, {
+        gdprConsent: {
+          gdprApplies: true,
+          consentString: consentString
+        }
+      });
 
-      const request = buildRequest(bidRequest);
-      const gdprConsent = request.data.bids[0].gdprConsent;
+      const gdprConsent = request.data.gdprConsent;
       expect(gdprConsent.consentRequired).to.be.equal(true);
       expect(gdprConsent.consentString).to.be.equal(consentString);
     });
 
     it('handles properly filled gdpr object where gdpr does not apply', () => {
       const consentString = 'someWeirdString';
-      const bidRequest = deepClone(defaultBidRequest);
-      bidRequest.gdprConsent = {
-        gdprApplies: false,
-        consentString: 'someWeirdString'
-      };
+      const request = buildRequest(defaultBidRequest, {
+        gdprConsent: {
+          gdprApplies: false,
+          consentString: consentString
+        }
+      });
 
-      const request = buildRequest(bidRequest);
-      const gdprConsent = request.data.bids[0].gdprConsent;
+      const gdprConsent = request.data.gdprConsent;
       expect(gdprConsent.consentRequired).to.be.equal(false);
       expect(gdprConsent.consentString).to.be.equal(consentString);
     });

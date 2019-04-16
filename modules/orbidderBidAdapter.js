@@ -40,15 +40,19 @@ export const spec = {
         pageUrl: referer
       };
       spec.bidParams[bidRequest.bidId] = bidRequest.params;
-      if (bidRequest && bidRequest.gdprConsent) {
-        item.gdprConsent = {
-          consentString: bidRequest.gdprConsent.consentString,
-          consentRequired: (typeof bidRequest.gdprConsent.gdprApplies === 'boolean')
-            ? bidRequest.gdprConsent.gdprApplies
-            : true
-        };
-      }
       bids.push(item);
+    }
+
+    let gdprConsent = {};
+    if (bidderRequest && bidderRequest.gdprConsent) {
+      gdprConsent = {
+        gdprConsent: {
+          consentString: bidderRequest.gdprConsent.consentString,
+          consentRequired: (typeof bidderRequest.gdprConsent.gdprApplies === 'boolean')
+            ? bidderRequest.gdprConsent.gdprApplies
+            : true
+        }
+      }
     }
 
     return {
@@ -56,7 +60,8 @@ export const spec = {
       method: 'POST',
       data: {
         pageUrl: referer,
-        bids: bids
+        bids: bids,
+        ...gdprConsent
       }
     };
   },
